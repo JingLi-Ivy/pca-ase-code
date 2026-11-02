@@ -24,6 +24,23 @@ consumes them.
 | `v8_round2/wetlab/ASE_raw_data.xlsx` | Dual-luciferase, qRT-PCR and functional-assay readouts | `08_figures/60_fig5_pub.R`, `63_supp_figs_C.R` |
 | `v8_round2/supp_data/GO_BP_topGO_classic_allterms_FDR.csv` | `01_atlas_qc/68_go_recheck_allterms_fdr.R` | `08_figures/69_suppS18_go_dotplot.R` |
 
+## Inputs of the alignment and counting step
+
+`00_upstream/run_star_wasp_pipeline_tumor.sh` and `run_star_wasp_pipeline_normal.sh` need the
+following files, none of which is in this repository. Locations are set at the top of each script
+(placeholder `/path/to/data_root`, see `config/remap_paths.sh`).
+
+| Input | What it is | How it was made |
+|---|---|---|
+| Trimmed RNA-seq reads, `RNA_seq/{tumor,normal}/<ID>_f1_trimmed.fq.gz` and `<ID>_r2_trimmed.fq.gz` | Adapter-trimmed paired-end reads of the CPGEA samples | Controlled access, GSA-Human HRA000099 (see Data access) |
+| STAR genome index | STAR 2.7.4a index of the Ensembl GRCh38 primary assembly with the Ensembl release 110 annotation | `STAR --runMode genomeGenerate --genomeFastaFiles Homo_sapiens.GRCh38.dna.primary_assembly.fa --sjdbGTFfile Homo_sapiens.GRCh38.110.gtf --sjdbOverhang 149 --genomeSAindexNbases 14 --genomeChrBinNbits 18 --genomeSAsparseD 1 --runThreadN 16` |
+| Reference FASTA for `samtools calmd` (`REF_GENOME`) | Ensembl-style GRCh38 FASTA (headers like `>1 dna:chromosome chromosome:GRCh38:1:1:248956422:1 REF`; chromosome names without `chr`) | Ensembl GRCh38 DNA sequence |
+| `combined.annotated.fixed.vcf.gz` (+ `.tbi`) | Joint-genotyped germline VCF of the WGS cohort; sample columns are named `<ID>_WGS` (e.g. `T32_WGS`) | BWA-MEM, GATK HaplotypeCaller and VQSR as described in Methods |
+| `gtf_gene_body_geneid.bed` | Gene-body intervals keyed by Ensembl gene_id | `00_upstream/build_gene_body_bed.sh` |
+| WASP checkout (`mapping/find_intersecting_snps.py`, `filter_remapped_reads.py`, `get_as_counts.py`) | External tool, https://github.com/bmvdgeijn/WASP | Not redistributed |
+
+The scripts also call STAR, samtools, bcftools, bedtools and tabix from the active conda environment.
+
 ## A note on the per-gene ASE statistic
 
 Two quantities appear in the data and they are not interchangeable:
