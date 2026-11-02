@@ -1,0 +1,170 @@
+#!/usr/bin/env Rscript
+# 52: is cis x trans stronger for prostate-related TFs than for other TFs? Design fixed 2026-10-06 before running the slope version
+# (the old correlation-difference per-TF table cistrans_full/tf_level_nomination.csv had been seen: lineage TFs ranked below average).
+# Data, paired patients, normal-tissue depth, variant selection (seed 42) and per gene x TF slope z: copied unchanged from 26e (= H5).
+# Sets:
+#   LIN = AR, FOXA1, HOXB13, GATA2, NKX3-1   (AR and its collaborating/pioneer factors at prostate enhancers)
+#   ONC = ERG, ETV1, ETV4, ETV5, MYC         (prostate cancer driver TFs)
+# TF universe = 26e TFs (ADASTRA-mapped, median FPKM >= 1 in both tissues) plus set members passing the same expression filter.
+# Statistic per TF: mean over genes of z in tumour, normal and delta (tumour - normal); per set: mean over its member TFs.
+# PRIMARY (one per set): delta, model r0 (the H5 estimand), set mean vs NDRAW random TF sets matched one-to-one on tumour expression
+#   (decile of median log2 FPKM) x variability (tertile of SD of log2 FPKM); two-sided P.
+# Secondary: tumour and normal separately; model r_bp (+ BayesPrism epithelial fraction); each member's percentile among all TFs;
+#   strict genotype permutation as in 26e (r0 only, NREP) of the contrast set mean - all-TF mean.
+suppressPackageStartupMessages({library(data.table); library(parallel)}); setDTthreads(1)
+NREP<-as.integer(Sys.getenv("NREP","100")); NC<-as.integer(Sys.getenv("NC","16"))
+msg<-function(...){cat(sprintf(...),"\n"); flush.console()}
+NDRAW<-as.integer(Sys.getenv("NDRAW","10000"))
+OUT<-"/path/to/data_root/ASE/code/v8_round2/prostate_tf_set"; dir.create(OUT,showWarnings=FALSE)
+AD<-"/path/to/data_root/ASE/ADASTRA6/ADASTRA.v.6.1.Mabel/TF"
+PP<-"/path/to/data_root/CPGEA/CPGEA_genotype/combined.134.qc"
+WIN<-10000; set.seed(42)
+
+bim<-fread(paste0(PP,".bim"),col.names=c("chr","snp","cm","pos","a1","a2"))[,idx:=.I][,chr:=paste0("chr",chr)]
+fam<-fread(paste0(PP,".fam"),col.names=c("fid","iid","f","m","sex","pheno"))
+sids<-as.character(sub("^N","",fam$fid)); N<-nrow(fam); bps<-ceiling(N/4)
+CON<-file(paste0(PP,".bed"),"rb"); readBin(CON,"raw",n=3)
+LUT<-matrix(NA_integer_,256L,4L)
+for(bv in 0:255) for(j in 0:3){cd<-bitwAnd(bitwShiftR(bv,2L*j),3L)
+  LUT[bv+1L,j+1L]<-if(cd==0L)2L else if(cd==1L)NA_integer_ else if(cd==2L)1L else 0L}
+readsnp<-function(idx){seek(CON,3+(idx-1)*bps); rb<-readBin(CON,"raw",n=bps)
+  as.vector(t(LUT[as.integer(rb)+1L,,drop=FALSE]))[seq_len(N)]}
+
+ann<-unique(fread("/path/to/data_root/ASE/all_T_samples_SNPs_with_ASE_annotation.csv",select=c("seqtnames","start","gene_id")))
+ann[,chr:=paste0("chr",as.character(seqtnames))]
+gpos<-ann[,.(gchr=chr[1],gmin=min(start),gmax=max(start)),by=gene_id]
+fpkm<-fread("/path/to/data_root/CPGEA/CPGEA_web/RNA-seq/FPKM/filter_genes.FPKM.xls")
+tcc<-grep("^T\\d+_WTS$",names(fpkm),value=TRUE); ncc<-grep("^N\\d+_WTS$",names(fpkm),value=TRUE)
+esT<-as.character(gsub("\\D","",tcc)); esN<-as.character(gsub("\\D","",ncc))
+PAIR<-intersect(esT,esN)
+ag<-fread("/path/to/data_root/ASE/code/ase_gene_sample_agg.csv.gz")[,sid:=as.character(gsub("\\D","",sample_id))]
+agN<-fread("/path/to/data_root/ASE/code/cistrans_full/ase_gene_sample_agg_N.csv.gz")[,sid:=as.character(sid)]
+
+score<-function(genes,cc,es){ m<-log2(as.matrix(fpkm[gene_name %in% genes, ..cc])+1)
+  data.table(sid=es, v=as.numeric(colMeans(t(scale(t(m))),na.rm=TRUE))) }
+EPI<-c("EPCAM","KRT8","KRT18","CDH1","CLDN4","KRT19"); PRO<-c("MKI67","PCNA","CCNB1","CCNB2","CDK1","CCNA2","AURKA")
+covT<-merge(score(EPI,tcc,esT)[,.(sid,epi=v)], score(PRO,tcc,esT)[,.(sid,pro=v)], by="sid")
+covN<-merge(score(EPI,ncc,esN)[,.(sid,epi=v)], score(PRO,ncc,esN)[,.(sid,pro=v)], by="sid")
+rdec<-function(f){ if(!nzchar(f)||!file.exists(f)) return(NULL); d<-fread(f); d[,.(sid=gsub("\\D","",get(names(d)[1])), bp_epi=Epithelial_cells)] }
+dT<-rdec(Sys.getenv("DECON_T")); dN<-rdec(Sys.getenv("DECON_N"))
+if(!is.null(dT)) covT<-merge(covT,dT,by="sid",all.x=TRUE); if(!is.null(dN)) covN<-merge(covN,dN,by="sid",all.x=TRUE)
+HAS_BP<-!is.null(dT)&&!is.null(dN)
+if(HAS_BP){ msg("BayesPrism epithelial fraction: tumor %d, normal %d samples", sum(is.finite(covT$bp_epi)), sum(is.finite(covN$bp_epi)))
+  msg("  Spearman(marker score, BayesPrism epi): tumor %.2f, normal %.2f", cor(covT$epi,covT$bp_epi,method="s",use="c"), cor(covN$epi,covN$bp_epi,method="s",use="c")) }
+
+loadase<-function(pre,es,cov){
+  fs<-list.files("/path/to/data_root/ASE",pattern=sprintf("^%s\\d+_ase_results\\.csv$",pre),full.names=TRUE)
+  a<-rbindlist(lapply(fs,function(f){d<-fread(f)[,.(gene_id,a)];d[,sid:=as.character(gsub("\\D","",basename(f)))];d}))
+  d<-merge(a,(if(pre=="N") agN else ag)[,.(gene_id,sid,dep)],by=c("gene_id","sid"))[dep>=20 & sid %in% es]
+  d[,`:=`(ai=abs(a), ld=log10(dep))]; merge(d,cov,by="sid",all.x=TRUE)}
+aT<-loadase("T",esT,covT)[sid %in% PAIR]; aN<-loadase("N",esN,covN)[sid %in% PAIR]
+msg("paired patients with ASE in both tissues: tumour %d, normal %d", uniqueN(aT$sid), uniqueN(aN$sid))
+gT<-aT[,.N,by=gene_id][N>=80]$gene_id; gN<-aN[,.N,by=gene_id][N>=80]$gene_id
+gok<-intersect(gT,gN); aT<-aT[gene_id %in% gok]; aN<-aN[gene_id %in% gok]
+msg("genes measurable in both tissues: %s", format(length(gok),big.mark=","))
+res<-function(d,fml){ d[,{ok<-complete.cases(.SD); v<-rep(NA_real_,.N)
+  if(sum(ok)>20) v[ok]<-as.numeric(residuals(lm(fml,data=.SD[ok]))); v}, by=gene_id, .SDcols=all.vars(fml)]$V1 }
+MODELS<-list(r0=ai~ld); if(HAS_BP) MODELS$r_bp<-ai~ld+bp_epi else stop("set DECON_T / DECON_N (BayesPrism v2) as in run_26e.sh")
+for(nm in names(MODELS)){ setorder(aT,gene_id); setorder(aN,gene_id)
+  aT[,(nm):=res(aT,MODELS[[nm]])]; aN[,(nm):=res(aN,MODELS[[nm]])] }
+setkey(aT,gene_id); setkey(aN,gene_id)
+
+gvv<-function(s,cc){r<-fpkm[gene_name==s]; if(!nrow(r))return(NULL)
+  if(nrow(r)>1){m<-apply(as.matrix(r[,..cc]),1,median); r<-r[which.max(m)]}; as.numeric(r[1,..cc])}
+map<-fread("/path/to/data_root/ASE/code/adastra_tf_map.csv")
+map<-map[file.exists(file.path(AD,paste0(mn,"_HUMAN.tsv")))]
+map[,`:=`(mT=sapply(sym,function(s){v<-gvv(s,tcc); if(is.null(v))NA_real_ else median(v,na.rm=TRUE)}),
+          mN=sapply(sym,function(s){v<-gvv(s,ncc); if(is.null(v))NA_real_ else median(v,na.rm=TRUE)}))]
+SETS<-list(LIN=c("AR","FOXA1","HOXB13","GATA2","NKX3-1"), ONC=c("ERG","ETV1","ETV4","ETV5","MYC"))
+ext<-data.table(sym=setdiff(unlist(SETS),map$sym))
+ext[,`:=`(mT=sapply(sym,function(s){v<-gvv(s,tcc); if(is.null(v))NA_real_ else median(v,na.rm=TRUE)}),
+          mN=sapply(sym,function(s){v<-gvv(s,ncc); if(is.null(v))NA_real_ else median(v,na.rm=TRUE)}))]
+tfl<-rbind(map[,.(sym,mT,mN)],ext)[is.finite(mT)&is.finite(mN)&mT>=1&mN>=1]
+tfl<-unique(tfl,by="sym")
+for(s in names(SETS)){ miss<-setdiff(SETS[[s]],tfl$sym)
+  msg("set %s: %d/%d members in the TF universe%s", s, length(SETS[[s]])-length(miss), length(SETS[[s]]),
+      if(length(miss)) paste0(" (not expressed / not found: ",paste(miss,collapse=", "),")") else "")
+  SETS[[s]]<-intersect(SETS[[s]],tfl$sym) }
+TZT<-do.call(cbind,lapply(tfl$sym,function(s) as.numeric(scale(log2(gvv(s,tcc)+0.01)))))
+TZN<-do.call(cbind,lapply(tfl$sym,function(s) as.numeric(scale(log2(gvv(s,ncc)+0.01)))))
+colnames(TZT)<-colnames(TZN)<-tfl$sym; rownames(TZT)<-esT; rownames(TZN)<-esN
+int<-function(y) qnorm((rank(y)-0.5)/length(y))
+slz<-function(y1,M1,y0,M0){
+  f<-function(y,M){n<-length(y); Mc<-sweep(M,2,colMeans(M)); yc<-y-mean(y); sxx<-colSums(Mc^2)
+    b<-as.numeric(crossprod(Mc,yc))/sxx; rss<-sum(yc^2)-b^2*sxx; list(b=b,v=pmax(rss,0)/(n-2)/sxx)}
+  a<-f(y1,M1); c<-f(y0,M0); z<-(a$b-c$b)/sqrt(a$v+c$v); z[!is.finite(z)]<-0; z}
+fz<-function(r1,M1,r0,M0,n1,n0){
+  c1<-suppressWarnings(as.numeric(cor(r1,M1,method="spearman"))); c0<-suppressWarnings(as.numeric(cor(r0,M0,method="spearman")))
+  c1[!is.finite(c1)]<-0; c0[!is.finite(c0)]<-0
+  (atanh(pmin(pmax(c1,-.99),.99))-atanh(pmin(pmax(c0,-.99),.99)))/sqrt(1/(n1-3)+1/(n0-3))}
+
+both<-intersect(esT,esN); setkey(bim,chr); sel<-list()
+for(g in gok){
+  gp<-gpos[gene_id==g]; if(!nrow(gp)) next
+  cd<-bim[.(gp$gchr)][pos>=gp$gmin-WIN & pos<=gp$gmax+WIN]; if(!nrow(cd)) next
+  if(nrow(cd)>40) cd<-cd[sample(.N,40)]
+  best<-NULL; bv<--1L
+  for(k in seq_len(nrow(cd))){H<-setNames(readsnp(cd$idx[k]),sids)[both]
+    v<-min(sum(H==1,na.rm=TRUE), sum(H %in% c(0,2),na.rm=TRUE)); if(v>bv){bv<-v; best<-cd[k]}}
+  if(is.null(best)||bv<25) next
+  sel[[length(sel)+1]]<-list(gene_id=g,idx=best$idx,snp=best$snp,minhh=bv)}
+S<-rbindlist(sel); msg("selected genes = %s", format(nrow(S),big.mark=","))
+GT<-sapply(S$idx,readsnp); rownames(GT)<-sids
+
+tfz<-function(GDx,TZ,col,G=GT){ Z<-matrix(NA_real_,nrow(S),ncol(TZ),dimnames=list(S$gene_id,colnames(TZ)))
+  for(i in seq_len(nrow(S))){ z<-GDx[[i]]; y<-z[[col]]; hh<-G[z$sid,i]
+    kp<-!is.na(hh)&is.finite(y); i1<-which(kp&hh==1L); i0<-which(kp&hh!=1L)
+    if(length(i1)<25||length(i0)<25) next
+    yy<-rep(NA_real_,length(y)); yy[kp]<-int(y[kp]); M<-TZ[z$sid,,drop=FALSE]
+    Z[i,]<-slz(yy[i1],M[i1,,drop=FALSE],yy[i0],M[i0,,drop=FALSE]) }
+  Z }
+GDT<-lapply(S$gene_id,function(g) aT[.(g)]); GDN<-lapply(S$gene_id,function(g) aN[.(g)])
+pertf<-function(col,G=GT){ ZT<-tfz(GDT,TZT,col,G); ZN<-tfz(GDN,TZN,col,G)
+  ok<-rowSums(is.na(ZT))==0 & rowSums(is.na(ZN))==0
+  data.table(TF=colnames(TZT), tumor=colMeans(ZT[ok,,drop=FALSE]), normal=colMeans(ZN[ok,,drop=FALSE]),
+             delta=colMeans(ZT[ok,,drop=FALSE]-ZN[ok,,drop=FALSE]), genes=sum(ok)) }
+
+lg<-sapply(tfl$sym,function(s) log2(gvv(s,tcc)+0.01))
+feat<-data.table(TF=tfl$sym, mexp=apply(lg,2,median), sdx=apply(lg,2,sd))
+feat[,`:=`(dec=cut(mexp,unique(quantile(mexp,0:10/10)),include.lowest=TRUE,labels=FALSE),
+           ter=cut(sdx,unique(quantile(sdx,0:3/3)),include.lowest=TRUE,labels=FALSE))]
+inset<-unlist(SETS)
+pool<-function(tf){ f<-feat[TF==tf]; p<-feat[!TF %in% inset & dec==f$dec & ter==f$ter]$TF
+  if(length(p)<10) p<-feat[!TF %in% inset & dec==f$dec]$TF; p }
+POOLS<-lapply(setNames(inset,inset),pool)
+msg("matched pool sizes: %s", paste(sprintf("%s=%d",names(POOLS),lengths(POOLS)),collapse=", "))
+
+TS<-list(); SUM<-list(); RK<-list()
+for(nm in names(MODELS)){
+  st<-merge(pertf(nm),feat[,.(TF,mexp,sdx)],by="TF"); st[,model:=nm]; TS[[nm]]<-st
+  msg("\n[%s] genes %s, TFs %d | mean over TFs: tumor %+.4f normal %+.4f delta %+.4f (26e r0: +0.0082 / -0.0054 / +0.0136)",
+      nm, format(st$genes[1],big.mark=","), nrow(st), mean(st$tumor), mean(st$normal), mean(st$delta))
+  for(v in c("tumor","normal","delta")){
+    st[,pct:=100*frank(get(v))/.N]
+    RK[[paste(nm,v)]]<-st[TF %in% inset,.(model=nm,stat=v,TF,value=get(v),percentile=pct)]
+    vv<-setNames(st[[v]],st$TF)
+    for(s in names(SETS)){ m<-SETS[[s]]; obs<-mean(vv[m])
+      dr<-sapply(m,function(tf) vv[sample(POOLS[[tf]],NDRAW,replace=TRUE)]); nl<-rowMeans(matrix(dr,nrow=NDRAW))
+      p<-(1+sum(abs(nl-mean(nl))>=abs(obs-mean(nl))))/(NDRAW+1)
+      SUM[[paste(nm,v,s)]]<-data.table(model=nm,stat=v,set=s,members=paste(m,collapse=","),obs=obs,all_TF_mean=mean(vv),
+        matched_null_mean=mean(nl),matched_null_sd=sd(nl),z=(obs-mean(nl))/sd(nl),P=p,
+        primary=(nm=="r0"&v=="delta"))
+      msg("  %-6s %-3s obs %+.4f | matched null %+.4f +- %.4f | z %+.2f | P=%.4f%s", v, s, obs, mean(nl), sd(nl),
+          (obs-mean(nl))/sd(nl), p, if(nm=="r0"&&v=="delta") "   <- PRIMARY" else "") } }
+  st[,pct:=NULL] }
+fwrite(rbindlist(TS), file.path(OUT,"per_tf_slope_z.csv"))
+fwrite(rbindlist(SUM), file.path(OUT,"set_vs_matched_tf.csv"))
+fwrite(rbindlist(RK), file.path(OUT,"member_percentiles.csv"))
+msg("\nmember percentiles (r0):"); print(dcast(rbindlist(RK)[model=="r0"], TF~stat, value.var="percentile"))
+
+o<-TS$r0; obsC<-sapply(names(SETS),function(s) sapply(c("tumor","normal","delta"),function(v) mean(o[TF %in% SETS[[s]]][[v]])-mean(o[[v]])))
+msg("\nstrict permutation x%d on %d cores (r0)", NREP, NC)
+null<-rbindlist(mclapply(seq_len(NREP), function(b){ set.seed(5000+b); p<-sample.int(N); G<-GT[p,,drop=FALSE]; rownames(G)<-sids
+  x<-pertf("r0",G); rbindlist(lapply(names(SETS),function(s) data.table(rep=b,set=s,
+    tumor=mean(x[TF %in% SETS[[s]]]$tumor)-mean(x$tumor), normal=mean(x[TF %in% SETS[[s]]]$normal)-mean(x$normal),
+    delta=mean(x[TF %in% SETS[[s]]]$delta)-mean(x$delta)))) }, mc.cores=NC))
+fwrite(null, file.path(OUT,"set_contrast_strict_null.csv"))
+for(s in names(SETS)) for(v in c("tumor","normal","delta")){ x<-null[set==s][[v]]; ov<-obsC[v,s]
+  msg("%-3s %-6s set - all %+.4f | null %+.4f +- %.4f | two-sided P=%.4f", s, v, ov, mean(x), sd(x),
+      (1+sum(abs(x-mean(x))>=abs(ov-mean(x))))/(length(x)+1)) }
+msg("DONE")
