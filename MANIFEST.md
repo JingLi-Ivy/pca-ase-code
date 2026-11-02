@@ -8,6 +8,7 @@ Scripts are listed in the order they run within each directory.
 | Script | Produces |
 |---|---|
 | `run_star_wasp_pipeline_tumor.sh`, `run_star_wasp_pipeline_normal.sh` | Per-sample STAR alignment, WASP mapping-bias filtering and allele-specific read counting (tumor and adjacent normal), with genotype error from GQ and SNP-to-gene mapping. Produces the allelic count tables used by every ASE analysis (Methods). |
+| `build_gene_body_bed.sh` | Gene-body BED from the Ensembl GRCh38.110 GTF; maps SNPs to genes in the two STAR/WASP scripts. |
 | `run_all_ASE_pipeline.sh` | Count-table label alignment and integration of existing ASE results; it does not run STAR/WASP or the ASE test (see README). |
 | `run_facets.sh`, `run_facets.R` | FACETS allele-specific copy number, purity and ploidy (hg38). Defines balanced-diploid sites and SCNA states used throughout. |
 | `08_kif18b_phasing.sh`, `08a_align_alleles.R` | Beagle 5.5 phasing of the KIF18B locus against 1000 Genomes GRCh38, after aligning CPGEA REF/ALT to the reference panel. Input to `06_kif18b/08b_phased_allelic_ratio.R`. |

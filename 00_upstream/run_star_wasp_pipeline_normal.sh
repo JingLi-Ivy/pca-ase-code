@@ -307,7 +307,7 @@ BEGIN{ while((getline l < map)>0){ split(l,a,"\t"); g[a[1]]=a[2] } close(map) }
 GENE_BODY_BED="${BASE_DIR}/gtf_gene_body_geneid.bed"
 if [ ! -f "${GENE_BODY_BED}" ]; then
   echo "[ERR] missing gene body BED: ${GENE_BODY_BED}" >&2
-  echo "Generate it first with build_gene_body_bed.sh" >&2
+  echo "Generate it first with 00_upstream/build_gene_body_bed.sh" >&2
   exit 1
 fi
 
