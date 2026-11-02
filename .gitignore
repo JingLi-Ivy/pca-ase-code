@@ -1,0 +1,35 @@
+# No data in this repository
+*.csv
+*.tsv
+*.rds
+*.RData
+*.RDS
+*.bam
+*.bai
+*.vcf
+*.vcf.gz
+*.bed
+*.fastq
+*.fastq.gz
+*.xls
+*.xlsx
+
+# Outputs
+*.pdf
+*.png
+*.svg
+
+# Scheduler and R artefacts
+*.sh.o*
+*.sh.e*
+.Rhistory
+.RData
+.Rproj.user/
+__pycache__/
+.DS_Store
+
+# Exception: keep the dependency list
+!config/r_packages.txt
+
+# Exception: keep the source data promised in figure legends
+!source_data/*.csv

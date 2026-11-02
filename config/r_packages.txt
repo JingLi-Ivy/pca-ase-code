@@ -1,0 +1,59 @@
+# R packages used by this repository (extracted from library()/require() calls)
+
+## CRAN
+data.table
+tidyverse
+dplyr
+tidyr
+readr
+readxl
+stringr
+ggplot2
+ggpubr
+ggrepel
+patchwork
+gridExtra
+scales
+RColorBrewer
+pheatmap
+circlize
+VennDiagram
+UpSetR
+survival
+survminer
+survivalROC
+survIDINRI
+dcurves
+lme4
+httr
+jsonlite
+msigdbr
+Seurat
+tibble
+curl
+
+## Bioconductor
+limma
+clusterProfiler
+enrichplot
+topGO
+org.Hs.eg.db
+AnnotationDbi
+GenomicRanges
+rtracklayer
+ComplexHeatmap
+curatedTCGAData
+MultiAssayExperiment
+SummarizedExperiment
+BiocParallel
+MBASED   # 1.40.0
+
+## Other
+facets   # https://github.com/mskcc/facets
+aod
+BayesPrism   # 2.2.2, https://github.com/Danko-Lab/BayesPrism
+
+## Versions of the packages behind the paired tumor-normal analyses
+# R 4.4.1; data.table 1.17.8; lme4 1.1.38; aod 1.3.3; MBASED 1.40.0; BayesPrism 2.2.2;
+# ggplot2 4.0.2; patchwork 1.3.2; survival 3.8.3; limma 3.62.1.
+# topGO 2.58 was installed in a separate library (see 01_atlas_qc/68_go_recheck_allterms_fdr.R).
