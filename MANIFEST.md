@@ -7,7 +7,8 @@ Scripts are listed in the order they run within each directory.
 
 | Script | Produces |
 |---|---|
-| `run_all_ASE_pipeline.sh` | Count-table alignment and integration of existing ASE results. Actual STAR/WASP and Sen caller paths and SHA256 are documented in README and the v10 revalidation provenance. |
+| `run_star_wasp_pipeline_tumor.sh`, `run_star_wasp_pipeline_normal.sh` | Per-sample STAR alignment, WASP mapping-bias filtering and allele-specific read counting (tumor and adjacent normal), with genotype error from GQ and SNP-to-gene mapping. Produces the allelic count tables used by every ASE analysis (Methods). |
+| `run_all_ASE_pipeline.sh` | Count-table label alignment and integration of existing ASE results; it does not run STAR/WASP or the ASE test (see README). |
 | `run_facets.sh`, `run_facets.R` | FACETS allele-specific copy number, purity and ploidy (hg38). Defines balanced-diploid sites and SCNA states used throughout. |
 | `08_kif18b_phasing.sh`, `08a_align_alleles.R` | Beagle 5.5 phasing of the KIF18B locus against 1000 Genomes GRCh38, after aligning CPGEA REF/ALT to the reference panel. Input to `06_kif18b/08b_phased_allelic_ratio.R`. |
 | `31_phase_genome.sh`, `31a_align_fast.R` | Genome-wide Beagle 5.5 phasing of germline SNPs. Input to `03_paired_tn/37d_mbased_phased.R`. |

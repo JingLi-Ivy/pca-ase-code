@@ -57,16 +57,16 @@ with 16–32 cores. Inputs that are produced once and reused are listed in `conf
 ## Upstream method not redistributed
 
 The per-gene phase-marginalised beta-binomial ASE model is `rna_allele_imbalance.R` from
-Sen et al. (https://github.com/Arkosen/Allele-imbalance). The actual server caller is
-`/path/to/data_root/user/github/Allele-imbalance-analysis-of-RNA-and-DNA/rna_allele_imbalance.R`
-(SHA256 `c2f5237eeae518aff37d507d4cdfd553f8c1b75e19e98c8423f9dc8bfb5d1ccc`).
-The archived `00_upstream/run_all_ASE_pipeline.sh` only aligns count-table labels and
-integrates existing ASE results; it does not run STAR/WASP or the ASE test. Actual
-STAR/WASP drivers were located under `/path/to/data_root/wasp/scripts/`
-(`run_complete_pipeline_with_GQ_NEWDIR.sh` and the corresponding `_normal.sh`).
-The historical
-external directory is not a Git checkout, so its archived SHA256 identifies the
-inspected version; a complete per-sample historical execution manifest is unavailable.
+Sen et al. (https://github.com/Arkosen/Allele-imbalance). It is third-party code and is not
+redistributed here; the version that was run has SHA256
+`c2f5237eeae518aff37d507d4cdfd553f8c1b75e19e98c8423f9dc8bfb5d1ccc` (the original directory was
+not a Git checkout, so this checksum identifies the version used).
+
+STAR alignment, WASP mapping-bias filtering and allelic read counting are in
+`00_upstream/run_star_wasp_pipeline_tumor.sh` and `run_star_wasp_pipeline_normal.sh`. They call
+WASP and bedtools, which are external tools and are not redistributed. The script
+`00_upstream/run_all_ASE_pipeline.sh` only aligns count-table labels and integrates existing ASE
+results; it does not run STAR/WASP or the ASE test.
 
 ## Data access
 
