@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this code, please cite it as below."
 type: software
 title: "pca-ase-code: analysis code for within-patient tumor-normal allelic expression in prostate cancer (CPGEA)"
-abstract: "Analysis scripts for the manuscript 'Paired tumor-normal analysis reveals selective strengthening of weak allelic imbalance in prostate cancer'."
+abstract: "Analysis scripts for the manuscript 'Selective strengthening of weak allelic imbalance in prostate tumors relative to matched normal tissue'."
 authors:
   - family-names: Li
     given-names: Jing

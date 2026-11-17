@@ -1,7 +1,7 @@
 # Within-patient tumor–normal allelic expression in prostate cancer (CPGEA)
 
-Analysis code for the manuscript *Paired tumor–normal analysis reveals selective strengthening of weak
-allelic imbalance in prostate cancer*.
+Analysis code for the manuscript *Selective strengthening of weak allelic imbalance in prostate
+tumors relative to matched normal tissue*.
 
 The cohort is CPGEA (Chinese Prostate Cancer Genome and Epigenome Atlas): matched tumor and
 normal whole-genome sequencing and RNA-seq. The ASE atlas uses 118 tumors. The paired
