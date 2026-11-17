@@ -1,6 +1,8 @@
 # Manifest: script → manuscript item
 
-Figure and table numbers refer to the submitted manuscript. "Supp." = Supplemental.
+Figure and table numbers are the labels used when the scripts were written ("Supp." = Supplemental).
+Their correspondence to the current manuscript (Supplementary Fig. / Supplementary Data numbers,
+lower-case panel letters) is given under "Item numbering" in `README.md`.
 Scripts are listed in the order they run within each directory.
 
 ## 00_upstream — allelic counts, copy number, phasing

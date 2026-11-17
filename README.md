@@ -8,6 +8,38 @@ normal whole-genome sequencing and RNA-seq. The ASE atlas uses 118 tumors. The p
 tumor–normal analyses use 117 patients with a FACETS purity estimate and allelic coverage in
 both tissues.
 
+## Item numbering
+
+Figure and table numbers in this repository (README, `MANIFEST.md`, script comments) use the labels
+under which the scripts were written and checked: "Supp. Fig. S*n*" and "Supp. Table S*n*", with
+upper-case panel letters. The current manuscript numbers supplementary figures in order of first
+citation, provides the tables as Supplementary Data and uses lower-case panel letters (Fig. 1D here is
+Fig. 1d there). Main figure numbers and panels are unchanged.
+
+| Here | Current manuscript |
+|---|---|
+| Supp. Fig. S1 | Supplementary Fig. 2 |
+| Supp. Fig. S2 | Supplementary Fig. 1 |
+| Supp. Fig. S3 | Supplementary Fig. 3 |
+| Supp. Fig. S4 | Supplementary Fig. 4 |
+| Supp. Fig. S5 | Supplementary Fig. 5 |
+| Supp. Fig. S6 | Supplementary Fig. 7 |
+| Supp. Fig. S7 | Supplementary Fig. 8 |
+| Supp. Fig. S8 | Supplementary Fig. 9 |
+| Supp. Fig. S9 | Supplementary Fig. 12 |
+| Supp. Fig. S10 | Supplementary Fig. 13 |
+| Supp. Fig. S11 | Supplementary Fig. 15 |
+| Supp. Fig. S12 | Supplementary Fig. 16 |
+| Supp. Fig. S13 | Supplementary Fig. 14 |
+| Supp. Fig. S14 | Supplementary Fig. 11 |
+| Supp. Fig. S15 | Supplementary Fig. 10 |
+| Supp. Fig. S16 | Supplementary Fig. 6 |
+| Supp. Fig. S17 | Supplementary Fig. 17 |
+| Supp. Table S1–S22 | Supplementary Data 1–22 |
+| Supp. Table S13B | Supplementary Data 23 |
+| Supp. Table S16B | Supplementary Data 24 |
+| Supplemental Data S1 (GO enrichment, all terms) | Supplementary Data 25 |
+
 ## Repository layout
 
 | Directory | Manuscript section | Contents |
