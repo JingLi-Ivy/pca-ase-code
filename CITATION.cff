@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+type: software
+title: "pca-ase-code: analysis code for within-patient tumor-normal allelic expression in prostate cancer (CPGEA)"
+abstract: "Analysis scripts for the manuscript 'Paired tumor-normal analysis reveals selective strengthening of weak allelic imbalance in prostate cancer'."
+authors:
+  - family-names: Li
+    given-names: Jing
+    affiliation: "Suzhou Institute of Systems Medicine, Chinese Academy of Medical Sciences & Peking Union Medical College"
+  - family-names: Zhang
+    given-names: Qixiang
+    affiliation: "Suzhou Institute of Systems Medicine, Chinese Academy of Medical Sciences & Peking Union Medical College"
+  - family-names: Xu
+    given-names: Wenjie
+    affiliation: "Suzhou Institute of Systems Medicine, Chinese Academy of Medical Sciences & Peking Union Medical College"
+  - family-names: Wei
+    given-names: Gong-Hong
+    affiliation: "Suzhou Institute of Systems Medicine, Chinese Academy of Medical Sciences & Peking Union Medical College; Shanghai Medical College of Fudan University"
+repository-code: "https://github.com/JingLi-Ivy/pca-ase-code"
+license: MIT
+version: 1.0.0
+date-released: "2026-11-17"
+keywords:
+  - allele-specific expression
+  - prostate cancer
+  - tumor-normal comparison
+  - CPGEA
